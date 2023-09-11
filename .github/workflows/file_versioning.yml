@@ -1,0 +1,36 @@
+name: File manipulations
+
+on:
+  workflow_dispatch: 
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  files:
+    runs-on: windows-latest
+    steps:
+      
+      - uses: actions/checkout@v3
+
+      - name: Copy files with datetime
+        run: |
+          pwsh --version
+          ls
+          $todayDate = Get-Date -Format "MM-dd-yyyy_HH-mm"
+          $ext = '.sql.'+$todayDate
+          Get-ChildItem Deploy -File -Recurse -Filter "*.sql" | Rename-Item -NewName { $_.Name -replace '.sql',$ext }
+          Copy-Item -Path "Deploy\*" -Destination "Archive" -Recurse
+
+      - name: Delete files from Deploy 
+        run: | 
+          Get-ChildItem Deploy -File -Filter "*.sql.*" | Remove-Item -Force
+      
+      - name: Commit changes
+        uses: EndBug/add-and-commit@v9
+        with:
+          message: '[skip actions] Auto commit to archive' #The prefix [skip actions] is needed to not trigger any other workflow
+          committer_name: 'GitHub Actions'
+          committer_email: 'actions@github.com'
+          push: true
